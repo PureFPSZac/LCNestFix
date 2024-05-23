@@ -26,8 +26,8 @@ namespace NestFix
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.Awake))]
-        private static void AwakePostfix()
+        [HarmonyPatch(typeof(MenuManager), nameof(MenuManager.Start))]
+        private static void MenuManagerStartPostfix()
         {
             NestLogger.LogInfo("AwakePostfix called");
             var baboonAI = Resources.FindObjectsOfTypeAll<BaboonBirdAI>();
