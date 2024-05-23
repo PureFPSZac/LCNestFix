@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using System.Net;
@@ -54,24 +54,28 @@ namespace NestFix
             NestLogger.LogInfo("Nest width set");
         }
 
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.PositionEdgeCheck))]
-        private static void PositionEdgeCheckPostfix(float width, ref Vector3 __result)
+        private static bool NestSpawnPositionIsValid(Vector3 position, float width)
         {
-            const float distanceLimit = 0.1f;
             const int sampleCount = 8;
+            const float distanceLimit = 0.1f;
             var offsetVector = new Vector3(width, 0, 0);
 
             for (var i = 0; i < sampleCount; i++)
             {
                 var angle = 360f * i / sampleCount;
-                var samplePoint = __result + (Quaternion.Euler(0, angle, 0) * offsetVector);
+                var samplePoint = position + (Quaternion.Euler(0, angle, 0) * offsetVector);
                 if (!NavMesh.SamplePosition(samplePoint, out _, distanceLimit, -1))
-                {
-                    __result = Vector3.zero;
-                    return;
-                }
+                    return false;
             }
+            return true;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.PositionEdgeCheck))]
+        private static void PositionEdgeCheckPostfix(float width, ref Vector3 __result)
+        {
+            if (!NestSpawnPositionIsValid(__result, width))
+                __result = Vector3.zero;
         }
 
         private static T[] ArrayWithRemoved<T>(T[] array, int index)
