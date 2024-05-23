@@ -1,7 +1,7 @@
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
-using System.Net;
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
@@ -87,29 +87,41 @@ namespace NestFix
         [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.SpawnNestObjectForOutsideEnemy))]
         private static bool SpawnNestObjectForOutsideEnemyPrefix(RoundManager __instance, EnemyType enemyType, System.Random randomSeed)
         {
-            NestLogger.LogInfo("SpawnNestObjectForOutsideEnemyPrefix was called");
-            GameObject[] array = GameObject.FindGameObjectsWithTag("OutsideAINode");
-            int num = randomSeed.Next(0, array.Length);
-            Vector3 position = Vector3.zero;
-            for (int i = 0; i < array.Length; i++)
+            var nodes = GameObject.FindGameObjectsWithTag("OutsideAINode");
+            var tries = 2048;
+
+            Vector3? spawnPosition = null;
+            while (spawnPosition == null && tries > 0)
             {
-                position = array[num].transform.position;
-                position = __instance.GetRandomNavMeshPositionInBoxPredictable(position, 15f, default(NavMeshHit), randomSeed, __instance.GetLayermaskForEnemySizeLimit(enemyType));
-                position = __instance.PositionWithDenialPointsChecked(position, array, enemyType);
-                Vector3 vector = __instance.PositionEdgeCheck(position, enemyType.nestSpawnPrefabWidth);
-                array = ArrayWithRemoved(array, num);
-                if (vector == Vector3.zero)
+                var nodesLeft = new List<GameObject>(nodes);
+                NestLogger.LogInfo($"SpawnNestObjectForOutsideEnemyPrefix was called with {nodes.Length} nodes");
+                while (nodesLeft.Count > 0)
                 {
-                    num = (num + 1) % array.Length;
-                    num = randomSeed.Next(0, array.Length);
+                    var randomIndex = randomSeed.Next(0, nodesLeft.Count);
+                    var candidatePosition = nodesLeft[randomIndex].transform.position;
+                    nodesLeft.RemoveAt(randomIndex);
+
+                    candidatePosition = __instance.GetRandomNavMeshPositionInBoxPredictable(candidatePosition, 15f, default, randomSeed, __instance.GetLayermaskForEnemySizeLimit(enemyType));
+                    candidatePosition = __instance.PositionWithDenialPointsChecked(candidatePosition, nodes, enemyType);
+                    candidatePosition = __instance.PositionEdgeCheck(candidatePosition, enemyType.nestSpawnPrefabWidth);
+
+                    if (!candidatePosition.Equals(Vector3.zero))
+                    {
+                        spawnPosition = candidatePosition;
+                        break;
+                    }
                 }
-                else
-                {
-                    position = vector;
-                    break;
-                }
+
+                tries--;
             }
-            GameObject gameObject = UnityEngine.Object.Instantiate(enemyType.nestSpawnPrefab, position, Quaternion.Euler(Vector3.zero));
+
+            if (spawnPosition == null)
+            {
+                NestLogger.LogWarning($"Failed to find a spawn position for the {enemyType.name} nest.");
+                return false;
+            }
+
+            GameObject gameObject = UnityEngine.Object.Instantiate(enemyType.nestSpawnPrefab, spawnPosition.Value, Quaternion.Euler(Vector3.zero));
             gameObject.transform.Rotate(Vector3.up, randomSeed.Next(-180, 180), Space.World);
             if (!gameObject.gameObject.GetComponentInChildren<NetworkObject>())
             {
