@@ -87,13 +87,13 @@ namespace NestFix
         private static bool SpawnNestObjectForOutsideEnemyPrefix(RoundManager __instance, EnemyType enemyType, System.Random randomSeed)
         {
             var nodes = GameObject.FindGameObjectsWithTag("OutsideAINode");
-            var tries = 2048;
+            var tries = 32;
 
             Vector3? spawnPosition = null;
             while (spawnPosition == null && tries > 0)
             {
                 var nodesLeft = new List<GameObject>(nodes);
-                NestLogger.LogInfo($"SpawnNestObjectForOutsideEnemyPrefix was called with {nodes.Length} nodes");
+                NestLogger.LogInfo($"SpawnNestObjectForOutsideEnemyPrefix was called with {nodes.Length} nodes, {tries} tries left");
                 while (nodesLeft.Count > 0)
                 {
                     var randomIndex = randomSeed.Next(0, nodesLeft.Count);
