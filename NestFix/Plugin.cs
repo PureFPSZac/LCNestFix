@@ -18,6 +18,9 @@ namespace NestFix
         public const string VERSION = "0.0.1";
 
         static ManualLogSource NestLogger;
+
+        private static readonly NavMeshPath TempPath = new();
+
         private void Awake()
         {
             NestLogger = Logger;
@@ -25,56 +28,56 @@ namespace NestFix
             harmony.PatchAll(typeof(Plugin));
         }
 
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.SceneManager_OnLoadComplete1))]
-        private static void StartOfRound_SceneManager_OnLoadComplete1()
+        private static Vector4 Vec4Position(Vector3 position)
         {
-            NestLogger.LogInfo("OnLoadComplete1 called");
-
-            var enemyType = Resources.FindObjectsOfTypeAll<EnemyType>().FirstOrDefault(e => e.name == "BaboonHawk");
-            if (enemyType == null)
-            {
-                NestLogger.LogError("No Baboon hawk enemy type was found");
-                return;
-            }
-
-            enemyType.nestSpawnPrefabWidth = 3.5f;
-            if(enemyType.nestSpawnPrefab is null)
-            {
-                NestLogger.LogInfo("Prefab is null");
-            }
-            else if(enemyType.nestSpawnPrefab == null)
-            {
-                NestLogger.LogInfo("Prefab is destroyed");
-            }
-            var nestTransform = enemyType.nestSpawnPrefab.transform;
-            NestLogger.LogInfo(new System.Diagnostics.StackTrace());
-            nestTransform.GetChild(0).localPosition = new Vector3(-1.5f, -2.7f, 1.6f);
-            NestLogger.LogInfo("Nest width set");
+            return new Vector4(position.x, position.y, position.z, 1);
         }
 
-        private static bool NestSpawnPositionIsValid(Vector3 position, float width)
+        private static bool NestSpawnPositionIsValid(EnemyType enemyType, Vector3 position, Quaternion rotation)
         {
-            const int sampleCount = 8;
             const float distanceLimit = 0.1f;
-            var offsetVector = new Vector3(width, 0, 0);
 
-            for (var i = 0; i < sampleCount; i++)
+            if (enemyType.name == "BaboonHawk")
             {
-                var angle = 360f * i / sampleCount;
-                var samplePoint = position + (Quaternion.Euler(0, angle, 0) * offsetVector);
-                if (!NavMesh.SamplePosition(samplePoint, out _, distanceLimit, -1))
-                    return false;
-            }
-            return true;
-        }
+                var nest = enemyType.nestSpawnPrefab.transform;
+                var spikesParent = nest.Find("WoodPikes");
+                // Create a matrix to transform one of the prefab's spike positions into the destination position.
+                var transformMatrix = Matrix4x4.TRS(position, rotation, nest.localScale) * nest.worldToLocalMatrix;
+                if (spikesParent != null)
+                {
+                    var spikeColliders = spikesParent.GetComponentsInChildren<BoxCollider>();
+                    foreach (var spikeCollider in spikeColliders)
+                    {
+                        var spike = spikeCollider.transform;
+                        Vector4 spikeCenter = Vec4Position(spikeCollider.center);
+                        Vector4 spikeBottom = transformMatrix * spike.localToWorldMatrix * (spikeCenter - new Vector4(0, 0, spikeCollider.size.z / 2));
+                        Vector4 spikeTop = transformMatrix * spike.localToWorldMatrix * (spikeCenter + new Vector4(0, 0, spikeCollider.size.z / 2));
 
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.PositionEdgeCheck))]
-        private static void PositionEdgeCheckPostfix(float width, ref Vector3 __result)
-        {
-            if (!NestSpawnPositionIsValid(__result, width))
-                __result = Vector3.zero;
+                        if (!Physics.Linecast(spikeTop, spikeBottom, out var linecastHit, 0x100))
+                            return false;
+                        if (!NavMesh.SamplePosition(linecastHit.point, out var navMeshHit, distanceLimit, -1))
+                            return false;
+                        if (!NavMesh.CalculatePath(position, navMeshHit.position, -1, TempPath)
+                            || TempPath.status != NavMeshPathStatus.PathComplete)
+                            return false;
+                    }
+                }
+            }
+            else
+            {
+                /*const int sampleCount = 8;
+                var offsetVector = new Vector3(enemyType.nestSpawnPrefabWidth, 0, 0);
+
+                for (var i = 0; i < sampleCount; i++)
+                {
+                    var angle = 360f * i / sampleCount;
+                    var samplePoint = position + (Quaternion.Euler(0, angle, 0) * offsetVector);
+                    if (!NavMesh.SamplePosition(samplePoint, out _, distanceLimit, -1))
+                        return false;
+                }*/
+            }
+
+            return true;
         }
 
         private static T[] ArrayWithRemoved<T>(T[] array, int index)
@@ -90,6 +93,7 @@ namespace NestFix
             var tries = 32;
 
             Vector3? spawnPosition = null;
+            Quaternion? spawnRotation = null;
             while (spawnPosition == null && tries > 0)
             {
                 var nodesLeft = new List<GameObject>(nodes);
@@ -104,9 +108,12 @@ namespace NestFix
                     candidatePosition = __instance.PositionWithDenialPointsChecked(candidatePosition, nodes, enemyType);
                     candidatePosition = __instance.PositionEdgeCheck(candidatePosition, enemyType.nestSpawnPrefabWidth);
 
-                    if (!candidatePosition.Equals(Vector3.zero))
+                    var candidateRotation = Quaternion.Euler(0, randomSeed.Next(-180, 180), 0);
+
+                    if (!candidatePosition.Equals(Vector3.zero) && NestSpawnPositionIsValid(enemyType, candidatePosition, candidateRotation))
                     {
                         spawnPosition = candidatePosition;
+                        spawnRotation = candidateRotation;
                         break;
                     }
                 }
@@ -121,7 +128,7 @@ namespace NestFix
             }
 
             GameObject gameObject = UnityEngine.Object.Instantiate(enemyType.nestSpawnPrefab, spawnPosition.Value, Quaternion.Euler(Vector3.zero));
-            gameObject.transform.Rotate(Vector3.up, randomSeed.Next(-180, 180), Space.World);
+            gameObject.transform.localRotation = spawnRotation.Value * gameObject.transform.localRotation;
             if (!gameObject.gameObject.GetComponentInChildren<NetworkObject>())
             {
                 Debug.LogError("Error: No NetworkObject found in enemy nest spawn prefab that was just spawned on the host: '" + gameObject.name + "'");
