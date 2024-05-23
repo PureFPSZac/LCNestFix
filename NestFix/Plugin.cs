@@ -40,7 +40,16 @@ namespace NestFix
             }
             var enemyType = baboonAI[0].enemyType;
             enemyType.nestSpawnPrefabWidth = 3.5f;
+            if(enemyType.nestSpawnPrefab is null)
+            {
+                NestLogger.LogInfo("Prefab is null");
+            }
+            else if(enemyType.nestSpawnPrefab == null)
+            {
+                NestLogger.LogInfo("Prefab is destroyed");
+            }
             var nestTransform = enemyType.nestSpawnPrefab.transform;
+            NestLogger.LogInfo(new System.Diagnostics.StackTrace());
             nestTransform.GetChild(0).localPosition = new Vector3(-1.5f, -2.7f, 1.6f);
             NestLogger.LogInfo("Nest width set");
         }
