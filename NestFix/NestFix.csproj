@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>netstandard2.1</TargetFramework>
@@ -30,13 +30,9 @@
         <HintPath>..\..\Libraries\BepInEx.Harmony.dll</HintPath>
         <Private>false</Private>
       </Reference>
-      <Reference Include="Unity.Netcode.Runtime">
-        <HintPath>..\..\Libraries\Unity.Netcode.Runtime.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="UnityEngine">
-        <HintPath>..\..\Libraries\UnityEngine.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
+        <Reference Include="Unity.Netcode.Runtime">
+            <HintPath>..\..\Libraries\Unity.Netcode.Runtime.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
     </ItemGroup>
 </Project>
