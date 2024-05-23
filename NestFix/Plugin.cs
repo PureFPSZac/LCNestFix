@@ -2,6 +2,7 @@ using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
@@ -22,23 +23,21 @@ namespace NestFix
             NestLogger = Logger;
             var harmony = new Harmony(GUID);
             harmony.PatchAll(typeof(Plugin));
-            
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(MenuManager), nameof(MenuManager.Start))]
-        private static void MenuManagerStartPostfix()
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.SceneManager_OnLoadComplete1))]
+        private static void StartOfRound_SceneManager_OnLoadComplete1()
         {
-            NestLogger.LogInfo("AwakePostfix called");
-            var baboonAI = Resources.FindObjectsOfTypeAll<BaboonBirdAI>();
+            NestLogger.LogInfo("OnLoadComplete1 called");
 
-
-            if (baboonAI.Length == 0)
+            var enemyType = Resources.FindObjectsOfTypeAll<EnemyType>().FirstOrDefault(e => e.name == "BaboonHawk");
+            if (enemyType == null)
             {
-                NestLogger.LogInfo("No BaboonHawkAI found");
+                NestLogger.LogError("No Baboon hawk enemy type was found");
                 return;
             }
-            var enemyType = baboonAI[0].enemyType;
+
             enemyType.nestSpawnPrefabWidth = 3.5f;
             if(enemyType.nestSpawnPrefab is null)
             {
