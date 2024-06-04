@@ -15,7 +15,7 @@ namespace NestFix
     {
         public const string GUID = "PureFPSZac.NestFix";
         public const string NAME = "NestFix";
-        public const string VERSION = "0.0.1";
+        public const string VERSION = "1.0.0";
 
         static ManualLogSource NestLogger;
 
@@ -80,15 +80,29 @@ namespace NestFix
             return true;
         }
 
-        private static T[] ArrayWithRemoved<T>(T[] array, int index)
+        //debugging tool to spawn nests
+        private static void SpawnNest()
         {
-            return [.. array[0..index], .. array[(index+1)..]];
+            foreach (SpawnableEnemyWithRarity spawnableEnemy in RoundManager.Instance.currentLevel.OutsideEnemies)
+            {
+                EnemyType enemyType = spawnableEnemy.enemyType;
+                if (enemyType.name == "BaboonHawk" && enemyType.nestSpawnPrefab != null)
+                {
+                    var random = new System.Random();
+                    for (var i = 0; i < 100; i++)
+                        RoundManager.Instance.SpawnNestObjectForOutsideEnemy(enemyType, random);
+                }
+            }
         }
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.SpawnNestObjectForOutsideEnemy))]
         private static bool SpawnNestObjectForOutsideEnemyPrefix(RoundManager __instance, EnemyType enemyType, System.Random randomSeed)
         {
+            if (enemyType.name != "BaboonHawk")
+            {
+                return true;
+            }
             var nodes = GameObject.FindGameObjectsWithTag("OutsideAINode");
             var tries = 32;
 
@@ -127,24 +141,18 @@ namespace NestFix
                 return false;
             }
 
-            GameObject gameObject = UnityEngine.Object.Instantiate(enemyType.nestSpawnPrefab, spawnPosition.Value, Quaternion.Euler(Vector3.zero));
+            GameObject gameObject = Instantiate(enemyType.nestSpawnPrefab, spawnPosition.Value, Quaternion.Euler(Vector3.zero));
             gameObject.transform.localRotation = spawnRotation.Value * gameObject.transform.localRotation;
             if (!gameObject.gameObject.GetComponentInChildren<NetworkObject>())
-            {
                 Debug.LogError("Error: No NetworkObject found in enemy nest spawn prefab that was just spawned on the host: '" + gameObject.name + "'");
-            }
             else
-            {
                 gameObject.gameObject.GetComponentInChildren<NetworkObject>().Spawn(destroyWithScene: true);
-            }
+
             if (!gameObject.GetComponent<EnemyAINestSpawnObject>())
-            {
                 Debug.LogError("Error: No EnemyAINestSpawnObject component in nest object prefab that was just spawned on the host: '" + gameObject.name + "'");
-            }
             else
-            {
                 __instance.enemyNestSpawnObjects.Add(gameObject.GetComponent<EnemyAINestSpawnObject>());
-            }
+
             enemyType.nestsSpawned++;
 
             return false;
