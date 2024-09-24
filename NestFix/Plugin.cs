@@ -35,7 +35,7 @@ namespace NestFix
 
         private static bool NestSpawnPositionIsValid(EnemyType enemyType, Vector3 position, Quaternion rotation)
         {
-            const float distanceLimit = 0.1f;
+            const float distanceLimit = 0.5f;
 
             if (enemyType.name == "BaboonHawk")
             {
