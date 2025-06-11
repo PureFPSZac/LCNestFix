@@ -1,0 +1,10 @@
+{
+    "name": "NestFix",
+    "version_number": "1.2.0",
+    "website_url": "https://github.com/PureFPSZac/LCNestFix/",
+    "description": "v72 | A mod that fixes Baboon Hawk nest spawn positions",
+    "dependencies": 
+    [
+	    "BepInEx-BepInExPack-5.4.2100"
+    ]
+}
