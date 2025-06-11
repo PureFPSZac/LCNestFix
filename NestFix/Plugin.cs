@@ -15,7 +15,7 @@ namespace NestFix
     {
         public const string GUID = "PureFPSZac.NestFix";
         public const string NAME = "NestFix";
-        public const string VERSION = "1.0.0";
+        public const string VERSION = "1.1.0";
 
         static ManualLogSource NestLogger;
 
