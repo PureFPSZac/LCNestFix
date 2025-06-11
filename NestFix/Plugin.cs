@@ -119,7 +119,7 @@ namespace NestFix
                     nodesLeft.RemoveAt(randomIndex);
 
                     candidatePosition = __instance.GetRandomNavMeshPositionInBoxPredictable(candidatePosition, 15f, default, randomSeed, __instance.GetLayermaskForEnemySizeLimit(enemyType));
-                    candidatePosition = __instance.PositionWithDenialPointsChecked(candidatePosition, nodes, enemyType);
+                    candidatePosition = __instance.PositionWithDenialPointsChecked(candidatePosition, nodes, enemyType, enemyType.nestDistanceFromShip);
                     candidatePosition = __instance.PositionEdgeCheck(candidatePosition, enemyType.nestSpawnPrefabWidth);
 
                     var candidateRotation = Quaternion.Euler(0, randomSeed.Next(-180, 180), 0);
