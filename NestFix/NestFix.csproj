@@ -21,7 +21,13 @@
         <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
     </ItemGroup>
 
-    <Target Name="CopyToPackage" AfterTargets="AfterBuild">
+    <Target Name="DeleteOldPackageFiles" AfterTargets="AfterBuild">
+        <Delete Files="$(MSBuildProjectDirectory)\Package\LICENSE" />
+        <Delete Files="$(MSBuildProjectDirectory)\Package\README.md" />
+        <Delete Files="$(MSBuildProjectDirectory)\Package\NestFix.dll" />
+    </Target>
+
+    <Target Name="CopyToPackage" AfterTargets="AfterBuild" Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
         <Copy SourceFiles="$(SolutionDir)LICENSE" DestinationFolder="$(MSBuildProjectDirectory)\Package" />
         <Copy SourceFiles="$(SolutionDir)README.md" DestinationFolder="$(MSBuildProjectDirectory)\Package" />
         <Copy SourceFiles="$(OutDir)NestFix.dll" DestinationFolder="$(MSBuildProjectDirectory)\Package" />
