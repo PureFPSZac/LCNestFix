@@ -1,3 +1,6 @@
+# 1.3.0
+ - Updated for v81
+
 # 1.2.0
  - Updated for v72
 
